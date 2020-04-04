@@ -47,6 +47,10 @@ def getLatestEpisode(show):
   span = latest_video.getElementsByTagName(cr.VIDEO_DICT["title_tagName"])[0].toxml()
 
   title_stub = cr.VIDEO_DICT["title_stub"]
-  latest_video_number = span[span.find(title_stub) + len(title_stub) :].split()[0]
+  latest_video_number = ""
+  for char in span[span.find(title_stub) + len(title_stub) :].split()[0]:
+    if not char.isdigit():
+      break
+    latest_video_number += char
 
   return latest_video_number.replace("\"","").replace("\'", "")

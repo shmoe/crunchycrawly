@@ -1,5 +1,7 @@
 import crunchyroll_utils as cr
 import sqlite3
+import os.path
+import sys
 
 def parseBookmarks(bookmarks_path):
 	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
@@ -44,10 +46,8 @@ def parseBookmarks(bookmarks_path):
 	for pair in map(map_bookmark, c.fetchall()):
 		bookmarks.update(pair)
 
+	conn.close()
 	return bookmarks
-
-test_bookmarks = { "My Hero Academia": {"title_stub":"my-hero-academia", "episode" : "88", "season" : "4"}, "Black Clover": {"title_stub":"black-clover", "episode": "129", "season": None}} # test code
-
 
 def hasNewContent(show, bookmarks):
 	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
@@ -73,8 +73,21 @@ def hasNewContent(show, bookmarks):
 
 	return 0
 
-#TODO take location of places.sqlite from stdin then pass to parseBookmarks
-bookmarks = parseBookmarks("places.sqlite")
+#TODO implement for non-Windows 
+if os.name == "nt":
+	profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\")
+	if len(sys.argv) > 1:
+		profile_path += sys.argv[1] + "\\"
+	else:
+		profile_path += "rblyzgbi.default-release\\"
+else:
+	profile_path = "testenv/"
+
+
+try:
+	bookmarks = parseBookmarks(profile_path + "places.sqlite")
+except Exception as e:
+	sys.exit(e)
 
 new_season = []
 new_episode = []
@@ -86,12 +99,10 @@ for title in bookmarks:
 	elif result == 1:
 		new_episode.append(title)
 
-print("New Season:")
+print("New Season:", flush=True)
 for title in new_season:
-	print("   ", title)
+	print("   ", title, flush=True)
 
-print("New Episode:")
+print("New Episode:", flush=True)
 for title in  new_episode:
-	print("   ", title)
-
-#parseBookmarks("C:\\Users\\griff\\AppData\\Mozilla\\Firefox\\Profiles\\rblyzgbi.default-release\\places.sqlite")
+	print("   ", title, flush=True)

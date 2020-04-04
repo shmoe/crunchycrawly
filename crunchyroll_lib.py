@@ -5,7 +5,7 @@ import html5lib
 VIDEO_DICT = {"id_stub": "showview_videos_media_", "title_stub": "Episode ", "taName": "li", "title_tagName" : "a"}
 VIDEOS_DICT = {"id": "showview_content_videos", "tagName": "div"}
 SEASONS_DICT = {"class" : "list-of-seasons"}
-SEASON_DICT = {"class" : "season", "title_tagName" : "a", "title_attr": "title"}
+SEASON_DICT = {"class" : "season", "tagName" : "li", "title_tagName" : "a", "title_attr": "title"}
 
 def getShowPage(show):
   with urlopen("http://crunchyroll.com/" + show) as response:
