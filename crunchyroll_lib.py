@@ -7,10 +7,16 @@ VIDEOS_DICT = {"id": "showview_content_videos", "tagName": "div"}
 SEASONS_DICT = {"class" : "list-of-seasons"}
 SEASON_DICT = {"class" : "season", "tagName" : "li", "title_tagName" : "a", "title_attr": "title"}
 
+last_show = None
 def getShowPage(show):
+  global last_show
+  if last_show != None and last_show[0] == show:
+    return last_show[1]
+
   with urlopen("http://crunchyroll.com/" + show) as response:
     html = html5lib.parse(response, transport_encoding=response.info().get_content_charset(), treebuilder="dom")
 
+  last_show = (show, html)
   return html
 
 def getElementById(element, id, tagName):
