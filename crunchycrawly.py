@@ -2,6 +2,7 @@ import crunchyroll_utils as cr
 import sqlite3
 import os.path
 import sys
+import asyncio
 
 def parseBookmarks(bookmarks_path):
 	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
@@ -49,7 +50,7 @@ def parseBookmarks(bookmarks_path):
 	conn.close()
 	return bookmarks
 
-def hasNewContent(show, bookmarks):
+async def hasNewContent(show, bookmarks):
 	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
 
 	Arguments:
@@ -65,13 +66,22 @@ def hasNewContent(show, bookmarks):
 
 	#check if there is a new season
 	if current_season != None and latest_season != None and int(latest_season) >= int(current_season):
+		print(show  + ": new season")
 		return 2
 
 	#check if there is a new episode
 	if current_episode != None and latest_episode != None and int(latest_episode) >= int(current_episode):
+		print(show + ": new episode")
 		return 1
 
+	print(show)
 	return 0
+
+async def wrap_tasks(bookmarks):
+	tasks = []
+	for show in bookmarks:
+		tasks.append(hasNewContent(show, bookmarks))
+	return await asyncio.gather(*tasks)
 
 #TODO implement for non-Windows 
 if os.name == "nt":
@@ -92,8 +102,9 @@ except Exception as e:
 new_season = []
 new_episode = []
 
-for title in bookmarks:
-	result = hasNewContent(title, bookmarks)
+results = asyncio.run(wrap_tasks(bookmarks))
+
+for result in results:
 	if result == 2:
 		new_season.append(title)
 	elif result == 1:
