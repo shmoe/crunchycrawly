@@ -2,6 +2,7 @@ import crunchyroll_utils as cr
 import sqlite3
 import os.path
 import sys
+import concurrent.futures
 
 def parseBookmarks(bookmarks_path):
 	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
@@ -92,12 +93,14 @@ except Exception as e:
 new_season = []
 new_episode = []
 
-for title in bookmarks:
-	result = hasNewContent(title, bookmarks)
-	if result == 2:
-		new_season.append(title)
-	elif result == 1:
-		new_episode.append(title)
+with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+	futures = {executor.submit(hasNewContent, show, bookmarks): show for show in bookmarks}
+	for future in concurrent.futures.as_completed(futures):
+		result = future.result()
+		if result == 2:
+			new_season.append(futures[future])
+		elif result == 1:
+			new_episode.append(futures[future])
 
 print("New Season:", flush=True)
 for title in new_season:
