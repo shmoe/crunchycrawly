@@ -1,8 +1,8 @@
 import crunchyroll_utils as cr
 import sqlite3
-import os.path
 import sys
-import concurrent.futures
+import time
+import math
 
 def parseBookmarks(bookmarks_path):
 	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
@@ -74,38 +74,77 @@ def hasNewContent(show, bookmarks):
 
 	return 0
 
-#TODO implement for non-Windows 
-if os.name == "nt":
-	profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\")
-	if len(sys.argv) > 1:
-		profile_path += sys.argv[1] + "\\"
+def progressBar(completed_tasks_ref, total_tasks):
+	"""displays a progress bar based on number of tasks completed and returns 0 when completed_tasks_ref == total_tasks
+
+	Arguments:
+	completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
+		prevent threading conflicts
+	total_tasks --- total number of tasks
+	"""
+	os.system("setterm --cursor off")
+	bar_width = 30
+	while completed_tasks_ref["tasks"] < total_tasks:
+		completed_tasks = completed_tasks_ref["tasks"]
+		num_ticks = int(math.ceil(bar_width * (completed_tasks / total_tasks)))
+		num_blank = bar_width - num_ticks
+		sys.stdout.write("[" + "="*num_ticks + " "*num_blank + "]")
+		sys.stdout.flush()
+		time.sleep(0.1)
+		sys.stdout.write("\b" * (bar_width + 2))
+		sys.stdout.flush()
+
+	sys.stdout.write("[" + "="*bar_width + "]" + "\n\n")
+	sys.stdout.flush()
+
+	os.system("setterm --cursor on")
+	return 3
+
+if __name__ == "__main__":
+	import concurrent.futures
+	import os.path
+
+	#TODO implement for non-Windows 
+	if os.name == "nt":
+		profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\")
+		if len(sys.argv) > 1:
+			profile_path += sys.argv[1] + "\\"
+		else:
+			profile_path += "rblyzgbi.default-release\\"
 	else:
-		profile_path += "rblyzgbi.default-release\\"
-else:
-	profile_path = "testenv/"
+		profile_path = "testenv/"
 
 
-try:
-	bookmarks = parseBookmarks(profile_path + "places.sqlite")
-except Exception as e:
-	sys.exit(e)
+	try:
+		bookmarks = parseBookmarks(profile_path + "places.sqlite")
+	except Exception as e:
+		sys.exit(e)
 
-new_season = []
-new_episode = []
+	new_season = []
+	new_episode = []
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-	futures = {executor.submit(hasNewContent, show, bookmarks): show for show in bookmarks}
-	for future in concurrent.futures.as_completed(futures):
-		result = future.result()
-		if result == 2:
-			new_season.append(futures[future])
-		elif result == 1:
-			new_episode.append(futures[future])
+	with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+		#look up how the below statement works
+		futures = {executor.submit(hasNewContent, show, bookmarks): show for show in bookmarks}
+		completed_futures_obj = {"tasks":0}
+		total_futures = len(futures)
+		executor.submit(progressBar, completed_futures_obj, total_futures)
+		for future in concurrent.futures.as_completed(futures):
+			result = future.result()
+			if result != 3:
+				completed_futures_obj["tasks"] += 1
 
-print("New Season:", flush=True)
-for title in new_season:
-	print("   ", title, flush=True)
+			if result == 3:
+				print(str(completed_futures_obj["tasks"]) + "/" + str(total_futures))
+			elif result == 2:
+				new_season.append(futures[future])
+			elif result == 1:
+				new_episode.append(futures[future])
 
-print("New Episode:", flush=True)
-for title in  new_episode:
-	print("   ", title, flush=True)
+	print("New Season:", flush=True)
+	for title in new_season:
+		print("   ", title, flush=True)
+
+	print("New Episode:", flush=True)
+	for title in  new_episode:
+		print("   ", title, flush=True)
