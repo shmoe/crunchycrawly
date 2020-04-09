@@ -34,14 +34,17 @@ def parseBookmarks(bookmarks_path):
 	c = conn.cursor()
 
 	c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
-	params = c.fetchone() + folder_blacklist
+	root_id = c.fetchone()
+	params = tuple(root_id) + folder_blacklist
 
 	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), params)
 	subfolders = tuple( map(lambda row : row[0], c.fetchall()) )
 
+	#TODO select ids of all nested subfolders of `subfolders` and add to `subfolders`
+
 	c.execute("""SELECT moz_bookmarks.title, moz_places.url FROM moz_bookmarks
 				 JOIN moz_places ON moz_bookmarks.fk = moz_places.id
-				 WHERE moz_bookmarks.type=1 and moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*len(subfolders))), subfolders)
+				 WHERE moz_bookmarks.type=1 and moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
 
 	bookmarks = {}
 	for pair in map(map_bookmark, c.fetchall()):
