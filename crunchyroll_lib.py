@@ -4,7 +4,7 @@ from datetime import datetime
 import pytz
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0"
-EPISODE_DICT = {"date_tagName": "pubDate", "season_tagName" : "crunchyroll:season"}
+EPISODE_DICT = {"date_tagName": "pubDate", "episode_tagName":"crunchyroll:episodeNumber", "season_tagName" : "crunchyroll:season"}
 
 last_show = None
 last_check = None
@@ -27,17 +27,15 @@ def toTimeStamp(dt_str):
 	time = ""
 	tmz = ""
 
-	tmp = dt_str.split(",")
-	tmp = tmp[1].split(" ")
+	tmp = dt_str.split(" ")[1:]
 
 	day = int(tmp[0])
 	mon = MONTHS[tmp[1]]
 	year = int(tmp[2])
-	time = tmp[3].split(":")
+	time = list(map(lambda i : int(i), tmp[3].split(":")))
 	tmz = tmp[4]
 
-
-	return datetime(year, mon, day, time[0], time[1], time[3], pytz.timezone(tmz))
+	return datetime(year, mon, day, time[0], time[1], time[2], tzinfo=pytz.timezone(tmz)).timestamp()
 
 def getLatestEpisodeNode(xml):
 	global last_check
@@ -47,7 +45,7 @@ def getLatestEpisodeNode(xml):
 	episode_list = []
 
 	for node in xml.getElementsByTagName(EPISODE_DICT["date_tagName"]):
-		episode_list.append(tuple(node.parentNode, toTimeStamp(node.firstChild.data)))
+		episode_list.append( (node.parentNode, toTimeStamp(node.firstChild.data)) )
 
 	episode_list.sort(key = lambda tup : tup[1])
 
