@@ -1,44 +1,55 @@
-from urllib.request import urlopen
-from xml.dom import Node
-import html5lib
+from urllib.request import urlopen, Request
+from xml.dom.minidom import parse as xmlParse
+from datetime import datetime
+import pytz
 
-VIDEO_DICT = {"id_stub": "showview_videos_media_", "title_stub": "Episode ", "taName": "li", "title_tagName" : "a"}
-VIDEOS_DICT = {"id": "showview_content_videos", "tagName": "div"}
-SEASONS_DICT = {"class" : "list-of-seasons"}
-SEASON_DICT = {"class" : "season", "tagName" : "li", "title_tagName" : "a", "title_attr": "title"}
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0"
+EPISODE_DICT = {"date_tagName": "pubDate", "season_tagName" : "crunchyroll:season"}
 
 last_show = None
+last_check = None
 def getShowPage(show):
   global last_show
   if last_show != None and last_show[0] == show:
     return last_show[1]
 
-  with urlopen("http://crunchyroll.com/" + show, timeout=60) as response:
-    html = html5lib.parse(response, transport_encoding=response.info().get_content_charset(), treebuilder="dom")
+  with urlopen(Request("http://crunchyroll.com/" + show + ".rss", headers={"User-Agent":USER_AGENT}), timeout=60) as response:
+    xml = xmlParse(response)
+  last_show = (show, xml)
+  return xml
 
-  last_show = (show, html)
-  return html
+def toTimeStamp(dt_str):
+	MONTHS = { "Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12 } 
 
-def getElementById(element, id, tagName):
-  for node in element.getElementsByTagName(tagName):
-    if node.hasAttribute("id"):
-      if node.getAttribute("id") == id:
-        return node
+	year = 0
+	mon = 0
+	day = 0
+	time = ""
+	tmz = ""
 
-def getLatestSeasonNode(html):
-  videos_node = getElementById(html, VIDEOS_DICT["id"], VIDEOS_DICT["tagName"])
+	tmp = dt_str.split(",")
+	tmp = tmp[1].split(" ")
 
-  seasons = None
-  latest_season = None
+	day = int(tmp[0])
+	mon = MONTHS[tmp[1]]
+	year = int(tmp[2])
+	time = tmp[3].split(":")
+	tmz = tmp[4]
 
-  for child in videos_node.childNodes:
-    if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("class") and SEASONS_DICT["class"] in child.getAttribute("class"):
-      seasons = child
-      break
 
-  for child in seasons.childNodes:
-    if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("class") and SEASON_DICT["class"] in child.getAttribute("class"):
-      latest_season = child
-      break
+	return datetime(year, mon, day, time[0], time[1], time[3], pytz.timezone(tmz))
 
-  return latest_season
+def getLatestEpisodeNode(xml):
+	global last_check
+	if last_check != None and last_check[0] is xml:
+		return last_check[1]
+
+	episode_list = []
+
+	for node in xml.getElementsByTagName(EPISODE_DICT["date_tagName"]):
+		episode_list.append(tuple(node.parentNode, toTimeStamp(node.firstChild.data)))
+
+	episode_list.sort(key = lambda tup : tup[1])
+
+	last_check = (xml, episode_list[-1][0])
+	return episode_list[-1][0]
