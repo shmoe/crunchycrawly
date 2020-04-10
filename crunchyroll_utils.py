@@ -11,6 +11,10 @@ def getLatestSeason(show):
   season = 0
 
   latest_video_node = cr.getLatestEpisodeNode(xml)
+  season_nodes = latest_video_node.getElementsByTagName(cr.EPISODE_DICT["season_tagName"])
+  if len(season_nodes) == 0:
+    return 1
+
   season = latest_video_node.getElementsByTagName(cr.EPISODE_DICT["season_tagName"])[0].firstChild.data
 
   return int(season)
@@ -26,5 +30,5 @@ def getLatestEpisode(show):
   xml = cr.getShowPage(show)
   video_node = cr.getLatestEpisodeNode(xml)
 
-  latest_video = video_node.getElementsbyTagName(cr.EPISODE_DICT["episode_tagName"])[0].firstChild.data
+  latest_video = video_node.getElementsByTagName(cr.EPISODE_DICT["episode_tagName"])[0].firstChild.data
   return int(latest_video)
