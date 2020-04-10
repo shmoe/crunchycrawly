@@ -13,7 +13,7 @@ def getShowPage(show):
   if last_show != None and last_show[0] == show:
     return last_show[1]
 
-  with urlopen("http://crunchyroll.com/" + show) as response:
+  with urlopen("http://crunchyroll.com/" + show, timeout=60) as response:
     html = html5lib.parse(response, transport_encoding=response.info().get_content_charset(), treebuilder="dom")
 
   last_show = (show, html)

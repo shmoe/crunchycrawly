@@ -1,5 +1,6 @@
 import crunchyroll_utils as cr
 import sqlite3
+import cursor
 import sys
 import time
 import math
@@ -85,7 +86,7 @@ def progressBar(completed_tasks_ref, total_tasks):
 		prevent threading conflicts
 	total_tasks --- total number of tasks
 	"""
-	os.system("setterm --cursor off")
+	cursor.hide()
 	bar_width = 30
 	while completed_tasks_ref["tasks"] < total_tasks:
 		completed_tasks = completed_tasks_ref["tasks"]
@@ -100,22 +101,25 @@ def progressBar(completed_tasks_ref, total_tasks):
 	sys.stdout.write("[" + "="*bar_width + "]" + "\n\n")
 	sys.stdout.flush()
 
-	os.system("setterm --cursor on")
+	cursor.show()
 	return 3
 
 if __name__ == "__main__":
 	import concurrent.futures
 	import os.path
 
-	#TODO implement for non-Windows 
+	#TODO implement for non-Windows
 	if os.name == "nt":
 		profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\")
 		if len(sys.argv) > 1:
-			profile_path += sys.argv[1] + "\\"
+			profile_path += sys.argv[1] + "\\" # will break on implementing commandline options
 		else:
 			profile_path += "rblyzgbi.default-release\\"
-	else:
-		profile_path = "testenv/"
+	elif os.name == "posix":
+		profile_path = os.path.expandvars("~/.mozilla/firefox/") #at least for Debian. Test?
+
+		if os.getenv("DEBUG", default=False):
+			profile_path = "testenv/" # debug
 
 
 	try:
