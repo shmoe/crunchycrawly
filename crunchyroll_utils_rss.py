@@ -1,5 +1,5 @@
 from xml.dom import Node
-import crunchyroll_lib as cr
+import crunchyroll_lib_rss as cr
 
 def getLatestSeason(show):
   """Get the name of the latest season number for a specific series on crunchyroll

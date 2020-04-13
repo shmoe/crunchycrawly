@@ -1,4 +1,4 @@
-import crunchyroll_utils as cr
+import crunchyroll_utils_rss as cr
 import sqlite3
 import cursor
 import sys
