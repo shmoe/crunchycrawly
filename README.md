@@ -11,3 +11,19 @@ Takes the name of a Firefox profile's folder as an argument.
       - This folder and its subfolders that are not in the **blacklist** (currently not recursive) are searched for bookmarks.
 3. The subfolder blacklist, by default, contains "Ongoing by Air Day", "Watch List", "Completed" and "Reference".
       - support for a config file and command line options to define your own root folder and blacklist coming soon
+
+## Example of a bookmark tree
+Struck-through directories are ignored as they are in the default blacklist
+- **Anime**
+   + ~**Ongoing by Air Date**~
+   + ~**Watch List**~
+   + **Romance**
+      + `(s3) Oregairu
+   + **Action**
+      + *[345] Bleach
+      + *(130) Black Clover
+      + *(s2) That Time I was Reincarnated as a Slime
+   + **Comedy**
+      + `(22) Tonari No Seki-kun
+      + `(13) Tanaka-kun Is Always Listless
+   + ~**Reference**~
