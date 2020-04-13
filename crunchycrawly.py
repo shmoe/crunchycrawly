@@ -110,6 +110,7 @@ if __name__ == "__main__":
 	import platform
 	import os.path
 	import glob
+
 	#will break on implementing commandline options
 	if len(sys.argv) > 1:
 		profile = sys.argv[1]
@@ -126,7 +127,7 @@ if __name__ == "__main__":
 		elif platform.system() == "Darwin":
 			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 		else:
-			raise RunTimeError("platform OS not supported")
+			raise RunTimeError("platform OS not supported"
 
 		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 	except Exception as e:
