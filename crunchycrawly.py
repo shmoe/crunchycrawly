@@ -1,6 +1,7 @@
 import crunchyroll_utils_rss as cr
 import sqlite3
 import cursor
+
 import sys
 import time
 import math
@@ -106,24 +107,28 @@ def progressBar(completed_tasks_ref, total_tasks):
 
 if __name__ == "__main__":
 	import concurrent.futures
+	import platform
 	import os.path
-
-	#TODO implement for non-Windows
-	if os.name == "nt":
-		profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\")
-		if len(sys.argv) > 1:
-			profile_path += sys.argv[1] + "\\" # will break on implementing commandline options
-		else:
-			profile_path += "rblyzgbi.default-release\\"
-	elif os.name == "posix":
-		profile_path = os.path.expandvars("~/.mozilla/firefox/") #at least for Debian. Test?
-
-		if os.getenv("DEBUG", default=False):
-			profile_path = "testenv/" # debug
-
+	import glob
+	#will break on implementing commandline options
+	if len(sys.argv) > 1:
+		profile = sys.argv[1]
+	else:
+		profile = "*.default-release"
 
 	try:
-		bookmarks = parseBookmarks(profile_path + "places.sqlite")
+		if platform.system() == "Windows":
+			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
+		elif platform.system() == "Linux":
+			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/") #test for macOS
+			if os.getenv("DEBUG", default=False):
+				profile_path = "testenv/" #debug
+		elif platform.system() == "Darwin":
+			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
+		else:
+			raise RunTimeError("platform OS not supported")
+
+		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 	except Exception as e:
 		sys.exit(e)
 
