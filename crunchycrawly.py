@@ -146,7 +146,7 @@ Options and arguments:
 """
 	import concurrent.futures
 	import platform
-	import os.path
+	import os
 	import glob
 	import getopt
 
@@ -167,7 +167,6 @@ Options and arguments:
 			VERBOSE = True
 		if opt == "--rss":
 			RSS = True
-			#TODO implement below
 		if opt == "--html":
 			RSS = False
 		if opt in ["-b", "--blacklist"]:
@@ -177,6 +176,10 @@ Options and arguments:
 		if opt in ["-c", "--config-file"]:
 			#TODO
 			pass
+
+	if RSS:
+		import crunchyroll_utils_rss
+		cr = crunchyroll_utils_rss
 
 	try:
 		if len(args) == 0:
