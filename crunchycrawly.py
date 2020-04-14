@@ -6,12 +6,16 @@ import sys
 import time
 import math
 
-def parseBookmarks(bookmarks_path):
-	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
+ROOT_FOLDER = "Anime"
+BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
 
-	Argument:
-	bookmarks_path --- the path to the appropriate places.sqlite file
+def parseBookmarks(bookmarks_path):
 	"""
+takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
+
+Argument:
+bookmarks_path --- the path to the appropriate places.sqlite file
+"""
 	def map_bookmark(bookmark):
 		title = None
 		season = None
@@ -28,19 +32,29 @@ def parseBookmarks(bookmarks_path):
 
 		return {title : {"title_stub": bookmark[1].split(".com/")[1], "season": season, "episode": episode}}
 
-
-	root_folder = ("Anime",)
-	folder_blacklist = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
+	global ROOT_FOLDER, BLACKLIST
+	root_folder = (ROOT_FOLDER,)
+	folder_blacklist = BLACKLIST
 
 	conn = sqlite3.connect(bookmarks_path)
 	c = conn.cursor()
 
 	c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
-	root_id = c.fetchone()
-	params = tuple(root_id) + folder_blacklist
+	root_ids = c.fetchall()
+	if len(root_ids) > 1:
+		raise RuntimeError("root folder name " + root_folder[0] + " not unique")
 
-	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), params)
-	subfolders = tuple( map(lambda row : row[0], c.fetchall()) )
+	root_id = root_ids[0]
+	if root_id == None:
+		raise RuntimeError("bookmark folder " + root_folder[0] + " not found")
+
+	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), root_id + folder_blacklist)
+	rows = c.fetchall()
+
+	if len(rows) == 0:
+		subfolders = ()
+	else:
+		subfolders = tuple( map(lambda row : row[0], rows) )
 
 	#TODO select ids of all nested subfolders of `subfolders` and add to `subfolders`
 
@@ -49,44 +63,54 @@ def parseBookmarks(bookmarks_path):
 				 WHERE moz_bookmarks.type=1 and moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
 
 	bookmarks = {}
-	for pair in map(map_bookmark, c.fetchall()):
+
+	rows = c.fetchall()
+
+	if len(rows) == 0:
+		raise RuntimeError("no bookmarks found in " + ROOT_FOLDER)
+
+	for pair in map(map_bookmark, rows):
 		bookmarks.update(pair)
 
 	conn.close()
 	return bookmarks
 
-def hasNewContent(show, bookmarks):
+def hasNewContent(show, bookmarks, verbose=False):
 	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
 
-	Arguments:
-	show --- the key to the bookmarks dict for a particular show
-	bookmarks --- a properly formatted dictionary of bookmarks
-	"""
+Arguments:
+show --- the key to the bookmarks dict for a particular show
+bookmarks --- a properly formatted dictionary of bookmarks
+"""
 	current_episode = bookmarks[show]["episode"]
 	current_season = bookmarks[show]["season"]
 
 	latest_season = cr.getLatestSeason(bookmarks[show]["title_stub"])
 	latest_episode = cr.getLatestEpisode(bookmarks[show]["title_stub"])
 
-
+	retval = 0
 	#check if there is a new season
 	if current_season != None and latest_season != None and int(latest_season) >= int(current_season):
-		return 2
-
+		retval = 2
 	#check if there is a new episode
-	if current_episode != None and latest_episode != None and int(latest_episode) >= int(current_episode):
-		return 1
+	elif current_episode != None and latest_episode != None and int(latest_episode) >= int(current_episode):
+		retval = 1
 
-	return 0
+	if verbose:
+		if retval != 0:
+			print(show + " has a new " + ("season" if retval == 2 else "episode"))
+		elif retval == 0:
+			print(show + " has no new content")
+	return retval
 
 def progressBar(completed_tasks_ref, total_tasks):
 	"""displays a progress bar based on number of tasks completed and returns 0 when completed_tasks_ref == total_tasks
 
-	Arguments:
-	completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
-		prevent threading conflicts
-	total_tasks --- total number of tasks
-	"""
+Arguments:
+completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
+prevent threading conflicts
+total_tasks --- total number of tasks
+"""
 	cursor.hide()
 	bar_width = 30
 	while completed_tasks_ref["tasks"] < total_tasks:
@@ -95,7 +119,7 @@ def progressBar(completed_tasks_ref, total_tasks):
 		num_blank = bar_width - num_ticks
 		sys.stdout.write("[" + "="*num_ticks + " "*num_blank + "]")
 		sys.stdout.flush()
-		time.sleep(0.1)
+		time.sleep(0.01)
 		sys.stdout.write("\b" * (bar_width + 2))
 		sys.stdout.flush()
 
@@ -105,29 +129,76 @@ def progressBar(completed_tasks_ref, total_tasks):
 	cursor.show()
 	return 3
 
-if __name__ == "__main__":
+def main(argv):
+	"""usage: python crunchycrawly.py [option] [profile path]
+Options and arguments:
+-h,	--help			display this dialog
+-v,	--verbose		disable progress bar and output detailed play-by-play
+	--rss			use Crunchyroll's RSS feed to check for new content
+	--html			use the serie's html page to check for new content,
+					this is the default and most well supported
+-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
+					search
+-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
+					for series. this folder must have a unique
+					name to avoid collisions
+-c,	--config=FILE		takes the path to a config file
+"""
 	import concurrent.futures
 	import platform
-	import os.path
+	import os
 	import glob
+	import getopt
 
-	#will break on implementing commandline options
-	if len(sys.argv) > 1:
-		profile = sys.argv[1]
-	else:
-		profile = "*.default-release"
+	VERBOSE = False
+	RSS = False
 
 	try:
+		opts, args = getopt.getopt(argv, "hvb:r:c:", ["help", "verbose", "rss", "html", "blacklist=","root-folder=", "config="])
+	except getopt.GetoptError:
+		sys.exit(e)
+
+	for opt, arg in opts:
+		global ROOT_FOLDER, BLACKLIST
+		if opt in ["-h", "--help"]:
+			print(main.__doc__)
+			sys.exit(0)
+		if opt in ["-v", "--verbose"]:
+			VERBOSE = True
+		if opt == "--rss":
+			RSS = True
+		if opt == "--html":
+			RSS = False
+		if opt in ["-b", "--blacklist"]:
+			BLACKLIST = tuple(arg.split(" "))
+		if opt in ["-r", "--root-folder"]:
+			ROOT_FOLDER = arg
+		if opt in ["-c", "--config-file"]:
+			#TODO
+			pass
+
+	if RSS:
+		import crunchyroll_utils_rss
+		cr = crunchyroll_utils_rss
+
+	try:
+		if len(args) == 0:
+			profile = "*.default-release"
+		elif len(args) == 1:
+			profile = args[1]
+		else:
+			raise RuntimeError("expected 0-1 arguments, got " + len(args))
+
 		if platform.system() == "Windows":
 			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
 		elif platform.system() == "Linux":
-			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/") #test for macOS
+			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/")
 			if os.getenv("DEBUG", default=False):
 				profile_path = "testenv/" #debug
 		elif platform.system() == "Darwin":
 			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 		else:
-			raise RunTimeError("platform OS not supported"
+			raise RuntimeError("platform OS not supported")
 
 		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 	except Exception as e:
@@ -137,11 +208,13 @@ if __name__ == "__main__":
 	new_episode = []
 
 	with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-		#look up how the below statement works
-		futures = {executor.submit(hasNewContent, show, bookmarks): show for show in bookmarks}
+		futures = {executor.submit(hasNewContent, show, bookmarks, VERBOSE): show for show in bookmarks}
 		completed_futures_obj = {"tasks":0}
 		total_futures = len(futures)
-		executor.submit(progressBar, completed_futures_obj, total_futures)
+
+		if not VERBOSE:
+			executor.submit(progressBar, completed_futures_obj, total_futures)
+
 		for future in concurrent.futures.as_completed(futures):
 			result = future.result()
 			if result != 3:
@@ -154,6 +227,9 @@ if __name__ == "__main__":
 			elif result == 1:
 				new_episode.append(futures[future])
 
+	if VERBOSE:
+		print("\n")
+
 	print("New Season:", flush=True)
 	for title in new_season:
 		print("   ", title, flush=True)
@@ -161,3 +237,6 @@ if __name__ == "__main__":
 	print("New Episode:", flush=True)
 	for title in  new_episode:
 		print("   ", title, flush=True)
+
+if __name__ == "__main__":
+	main(sys.argv[1:])
