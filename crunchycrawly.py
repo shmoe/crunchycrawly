@@ -44,7 +44,7 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	if len(root_ids) > 1:
 		raise RuntimeError("root folder name " + root_folder[0] + " not unique")
 
-	root_id = c.fetchone()
+	root_id = root_ids[0]
 	if root_id == None:
 		raise RuntimeError("bookmark folder " + root_folder[0] + " not found")
 
@@ -65,18 +65,17 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	bookmarks = {}
 
 	rows = c.fetchall()
-	print(rows)
 
 	if len(rows) == 0:
 		raise RuntimeError("no bookmarks found in " + ROOT_FOLDER)
 
-	for pair in map(map_bookmark, c.fetchall()):
+	for pair in map(map_bookmark, rows):
 		bookmarks.update(pair)
 
 	conn.close()
 	return bookmarks
 
-def hasNewContent(show, bookmarks):
+def hasNewContent(show, bookmarks, verbose=False):
 	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
 
 Arguments:
@@ -89,16 +88,20 @@ bookmarks --- a properly formatted dictionary of bookmarks
 	latest_season = cr.getLatestSeason(bookmarks[show]["title_stub"])
 	latest_episode = cr.getLatestEpisode(bookmarks[show]["title_stub"])
 
-
+	retval = 0
 	#check if there is a new season
 	if current_season != None and latest_season != None and int(latest_season) >= int(current_season):
-		return 2
-
+		retval = 2
 	#check if there is a new episode
-	if current_episode != None and latest_episode != None and int(latest_episode) >= int(current_episode):
-		return 1
+	elif current_episode != None and latest_episode != None and int(latest_episode) >= int(current_episode):
+		retval = 1
 
-	return 0
+	if verbose: 
+		if retval != 0:
+			print(show + " has a new " + ("season" if retval == 2 else "episode"))
+		elif retval == 0:
+			print(show + " has no new content")
+	return retval
 
 def progressBar(completed_tasks_ref, total_tasks):
 	"""displays a progress bar based on number of tasks completed and returns 0 when completed_tasks_ref == total_tasks
@@ -116,7 +119,7 @@ total_tasks --- total number of tasks
 		num_blank = bar_width - num_ticks
 		sys.stdout.write("[" + "="*num_ticks + " "*num_blank + "]")
 		sys.stdout.flush()
-		time.sleep(0.1)
+		time.sleep(0.01)
 		sys.stdout.write("\b" * (bar_width + 2))
 		sys.stdout.flush()
 
@@ -162,7 +165,6 @@ Options and arguments:
 			sys.exit(0)
 		if opt in ["-v", "--verbose"]:
 			VERBOSE = True
-			#TODO implement below
 		if opt == "--rss":
 			RSS = True
 			#TODO implement below
@@ -187,7 +189,7 @@ Options and arguments:
 		if platform.system() == "Windows":
 			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
 		elif platform.system() == "Linux":
-			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/") #test for macOS
+			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/")
 			if os.getenv("DEBUG", default=False):
 				profile_path = "testenv/" #debug
 		elif platform.system() == "Darwin":
@@ -203,11 +205,13 @@ Options and arguments:
 	new_episode = []
 
 	with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-		#look up how the below statement works
-		futures = {executor.submit(hasNewContent, show, bookmarks): show for show in bookmarks}
+		futures = {executor.submit(hasNewContent, show, bookmarks, VERBOSE): show for show in bookmarks}
 		completed_futures_obj = {"tasks":0}
 		total_futures = len(futures)
-		executor.submit(progressBar, completed_futures_obj, total_futures)
+
+		if not VERBOSE:
+			executor.submit(progressBar, completed_futures_obj, total_futures)
+
 		for future in concurrent.futures.as_completed(futures):
 			result = future.result()
 			if result != 3:
@@ -219,6 +223,9 @@ Options and arguments:
 				new_season.append(futures[future])
 			elif result == 1:
 				new_episode.append(futures[future])
+
+	if VERBOSE:
+		print("\n")
 
 	print("New Season:", flush=True)
 	for title in new_season:
