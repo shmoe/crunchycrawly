@@ -144,12 +144,6 @@ Options and arguments:
 					name to avoid collisions
 -c,	--config=FILE		takes the path to a config file
 """
-	import concurrent.futures
-	import platform
-	import os
-	import glob
-	import getopt
-
 	VERBOSE = False
 	RSS = False
 
@@ -174,8 +168,13 @@ Options and arguments:
 		if opt in ["-r", "--root-folder"]:
 			ROOT_FOLDER = arg
 		if opt in ["-c", "--config-file"]:
-			#TODO
-			pass
+			with open(arg, 'r') as config_file:
+				for line in config_file:
+					pair = [el.strip() for el in line.split("=")]
+					if pair[0] == "ROOT_FOLDER":
+						ROOT_FOLDER = pair[1]
+					elif pair[0] == "BLACKLIST":
+						BLACKLIST = tuple([el.strip() for el in pair[1].split(",")])
 
 	if RSS:
 		import crunchyroll_utils_rss
@@ -218,12 +217,9 @@ Options and arguments:
 
 		for future in concurrent.futures.as_completed(futures):
 			result = future.result()
-			if result != 3:
-				completed_futures_obj["tasks"] += 1
+			completed_futures_obj["tasks"] += 1
 
-			if result == 3:
-				print(str(completed_futures_obj["tasks"]) + "/" + str(total_futures))
-			elif result == 2:
+			if result == 2:
 				new_season.append(futures[future])
 			elif result == 1:
 				new_episode.append(futures[future])
@@ -240,4 +236,10 @@ Options and arguments:
 		print("   ", title, flush=True)
 
 if __name__ == "__main__":
+	import concurrent.futures
+	import platform
+	import os
+	import glob
+	import getopt
+
 	main(sys.argv[1:])
