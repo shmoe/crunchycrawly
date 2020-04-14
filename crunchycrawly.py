@@ -6,12 +6,16 @@ import sys
 import time
 import math
 
-def parseBookmarks(bookmarks_path):
-	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
+ROOT_FOLDER = "Anime"
+BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
 
-	Argument:
-	bookmarks_path --- the path to the appropriate places.sqlite file
+def parseBookmarks(bookmarks_path):
 	"""
+takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
+
+Argument:
+bookmarks_path --- the path to the appropriate places.sqlite file
+"""
 	def map_bookmark(bookmark):
 		title = None
 		season = None
@@ -28,19 +32,29 @@ def parseBookmarks(bookmarks_path):
 
 		return {title : {"title_stub": bookmark[1].split(".com/")[1], "season": season, "episode": episode}}
 
-
-	root_folder = ("Anime",)
-	folder_blacklist = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
+	global ROOT_FOLDER, BLACKLIST
+	root_folder = (ROOT_FOLDER,)
+	folder_blacklist = BLACKLIST
 
 	conn = sqlite3.connect(bookmarks_path)
 	c = conn.cursor()
 
 	c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
-	root_id = c.fetchone()
-	params = tuple(root_id) + folder_blacklist
+	root_ids = c.fetchall()
+	if len(root_ids) > 1:
+		raise RuntimeError("root folder name " + root_folder[0] + " not unique")
 
-	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), params)
-	subfolders = tuple( map(lambda row : row[0], c.fetchall()) )
+	root_id = c.fetchone()
+	if root_id == None:
+		raise RuntimeError("bookmark folder " + root_folder[0] + " not found")
+
+	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), root_id + folder_blacklist)
+	rows = c.fetchall()
+
+	if len(rows) == 0:
+		subfolders = ()
+	else:
+		subfolders = tuple( map(lambda row : row[0], rows) )
 
 	#TODO select ids of all nested subfolders of `subfolders` and add to `subfolders`
 
@@ -49,6 +63,13 @@ def parseBookmarks(bookmarks_path):
 				 WHERE moz_bookmarks.type=1 and moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
 
 	bookmarks = {}
+
+	rows = c.fetchall()
+	print(rows)
+
+	if len(rows) == 0:
+		raise RuntimeError("no bookmarks found in " + ROOT_FOLDER)
+
 	for pair in map(map_bookmark, c.fetchall()):
 		bookmarks.update(pair)
 
@@ -58,10 +79,10 @@ def parseBookmarks(bookmarks_path):
 def hasNewContent(show, bookmarks):
 	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
 
-	Arguments:
-	show --- the key to the bookmarks dict for a particular show
-	bookmarks --- a properly formatted dictionary of bookmarks
-	"""
+Arguments:
+show --- the key to the bookmarks dict for a particular show
+bookmarks --- a properly formatted dictionary of bookmarks
+"""
 	current_episode = bookmarks[show]["episode"]
 	current_season = bookmarks[show]["season"]
 
@@ -82,11 +103,11 @@ def hasNewContent(show, bookmarks):
 def progressBar(completed_tasks_ref, total_tasks):
 	"""displays a progress bar based on number of tasks completed and returns 0 when completed_tasks_ref == total_tasks
 
-	Arguments:
-	completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
-		prevent threading conflicts
-	total_tasks --- total number of tasks
-	"""
+Arguments:
+completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
+prevent threading conflicts
+total_tasks --- total number of tasks
+"""
 	cursor.hide()
 	bar_width = 30
 	while completed_tasks_ref["tasks"] < total_tasks:
@@ -105,18 +126,64 @@ def progressBar(completed_tasks_ref, total_tasks):
 	cursor.show()
 	return 3
 
-if __name__ == "__main__":
+def main(argv):
+	"""usage: python crunchycrawly.py [option] [profile path]
+Options and arguments:
+-h,	--help			display this dialog
+-v,	--verbose		disable progress bar and output detailed play-by-play
+	--rss			use Crunchyroll's RSS feed to check for new content
+	--html			use the serie's html page to check for new content,
+					this is the default and most well supported
+-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
+					search
+-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
+					for series. this folder must have a unique
+					name to avoid collisions
+-c,	--config=FILE		takes the path to a config file
+"""
 	import concurrent.futures
 	import platform
 	import os.path
 	import glob
-	#will break on implementing commandline options
-	if len(sys.argv) > 1:
-		profile = sys.argv[1]
-	else:
-		profile = "*.default-release"
+	import getopt
+
+	VERBOSE = False
+	RSS = False
 
 	try:
+		opts, args = getopt.getopt(argv, "hvb:r:c:", ["help", "verbose", "rss", "html", "blacklist=","root-folder=", "config="])
+	except getopt.GetoptError:
+		sys.exit(e)
+
+	for opt, arg in opts:
+		global ROOT_FOLDER, BLACKLIST
+		if opt in ["-h", "--help"]:
+			print(main.__doc__)
+			sys.exit(0)
+		if opt in ["-v", "--verbose"]:
+			VERBOSE = True
+			#TODO implement below
+		if opt == "--rss":
+			RSS = True
+			#TODO implement below
+		if opt == "--html":
+			RSS = False
+		if opt in ["-b", "--blacklist"]:
+			BLACKLIST = tuple(arg.split(" "))
+		if opt in ["-r", "--root-folder"]:
+			ROOT_FOLDER = arg
+		if opt in ["-c", "--config-file"]:
+			#TODO
+			pass
+
+	try:
+		if len(args) == 0:
+			profile = "*.default-release"
+		elif len(args) == 1:
+			profile = args[1]
+		else:
+			raise RuntimeError("expected 0-1 arguments, got " + len(args))
+
 		if platform.system() == "Windows":
 			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
 		elif platform.system() == "Linux":
@@ -126,7 +193,7 @@ if __name__ == "__main__":
 		elif platform.system() == "Darwin":
 			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 		else:
-			raise RunTimeError("platform OS not supported")
+			raise RuntimeError("platform OS not supported")
 
 		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 	except Exception as e:
@@ -160,3 +227,6 @@ if __name__ == "__main__":
 	print("New Episode:", flush=True)
 	for title in  new_episode:
 		print("   ", title, flush=True)
+
+if __name__ == "__main__":
+	main(sys.argv[1:])
