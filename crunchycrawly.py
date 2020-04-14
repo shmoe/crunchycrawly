@@ -179,6 +179,7 @@ Options and arguments:
 
 	if RSS:
 		import crunchyroll_utils_rss
+		global cr
 		cr = crunchyroll_utils_rss
 
 	try:
