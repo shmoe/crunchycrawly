@@ -1,7 +1,10 @@
 from urllib.request import urlopen, Request
 from xml.dom.minidom import parse as xmlParse
 from datetime import datetime
+import inspect
+
 import pytz
+import util
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0"
 EPISODE_DICT = {"date_tagName": "pubDate", "episode_tagName":"crunchyroll:episodeNumber", "season_tagName" : "crunchyroll:season"}
@@ -13,8 +16,9 @@ def getShowPage(show):
   if last_show != None and last_show[0] == show:
     return last_show[1]
 
-  with urlopen(Request("http://crunchyroll.com/" + show + ".rss", headers={"User-Agent":USER_AGENT}), timeout=60) as response:
+  with urlopen(Request("http://crunchyroll.com/" + show + ".rss", headers={"User-Agent":USER_AGENT}), timeout=15) as response:
     xml = xmlParse(response)
+
   last_show = (show, xml)
   return xml
 
@@ -46,6 +50,9 @@ def getLatestEpisodeNode(xml):
 
 	for node in xml.getElementsByTagName(EPISODE_DICT["date_tagName"]):
 		episode_list.append( (node.parentNode, toTimeStamp(node.firstChild.data)) )
+	if len(episode_list) == 0:
+		frame_info = inspect.getframeinfo(inspect.currentframe())
+		raise RuntimeError(util.get_ffl_str(frame_info) + " no nodes with tag {} found".format(EPISODE_DICT["date_tagName"]))
 
 	episode_list.sort(key = lambda tup : tup[1])
 

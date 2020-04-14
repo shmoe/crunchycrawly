@@ -1,10 +1,12 @@
 import crunchyroll_utils as cr
 import sqlite3
 import cursor
+import util
 
 import sys
 import time
 import math
+import inspect
 
 ROOT_FOLDER = "Anime"
 BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
@@ -42,11 +44,13 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
 	root_ids = c.fetchall()
 	if len(root_ids) > 1:
-		raise RuntimeError("root folder name " + root_folder[0] + " not unique")
+		frame_info = inspect.getframeinfo(inspect.currentframe())
+		raise RuntimeError(util.get_ffl_str(frame_info) + " root folder name {} not unique".format(root_folder[0]))
 
 	root_id = root_ids[0]
 	if root_id == None:
-		raise RuntimeError("bookmark folder " + root_folder[0] + " not found")
+		frame_info = inspect.getframeinfo(inspect.currentframe())
+		raise RuntimeError(util.get_ffl_str(frame_info) + " bookmark folder {} not found".format(root_folder[0]))
 
 	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), root_id + folder_blacklist)
 	rows = c.fetchall()
@@ -67,7 +71,8 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	rows = c.fetchall()
 
 	if len(rows) == 0:
-		raise RuntimeError("no bookmarks found in " + ROOT_FOLDER)
+		frame_info = inspect.getframeinfo(inspect.currentframe())
+		raise RuntimeError(util.get_ffl_str(frame_info) + "no bookmarks found in {}".format(root_folder[0]))
 
 	for pair in map(map_bookmark, rows):
 		bookmarks.update(pair)
@@ -187,7 +192,8 @@ Options and arguments:
 		elif len(args) == 1:
 			profile = args[1]
 		else:
-			raise RuntimeError("expected 0-1 arguments, got " + len(args))
+			frame_info = inspect.getframeinfo(inspect.currentframe())
+			raise RuntimeError(util.get_ffl_str(frame_info) + " expected 0-1 arguments, got {}".format(len(args)))
 
 		if platform.system() == "Windows":
 			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
@@ -198,7 +204,8 @@ Options and arguments:
 		elif platform.system() == "Darwin":
 			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 		else:
-			raise RuntimeError("platform OS not supported")
+			frame_info = inspect.getframeinfo(inspect.currentframe())
+			raise RuntimeError(util.get_ffl_str(frame_info) + "platform OS not supported")
 
 		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 	except Exception as e:

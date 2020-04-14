@@ -1,6 +1,8 @@
 from xml.dom import Node
+import inspect
 
 import crunchyroll_lib as cr
+import util
 
 def getLatestSeason(show):
   """Get the name of the latest season number for a specific series on crunchyroll
@@ -33,16 +35,27 @@ def getLatestEpisode(show):
   html = cr.getShowPage(show)
   latest_season = cr.getLatestSeasonNode(html)
 
+  if not latest_season.hasChildNodes():
+    frame_info = inspect.getframeinfo(inspect.currentframe())
+    raise RuntimeError(util.get_ffl_str(frame_info) + " node has no children")
   for child in latest_season.childNodes:
     if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("class") and "portrait-grid" in child.getAttribute("class"):
       latest_season = child
       break
 
+  if not latest_season.hasChildNodes():
+    frame_info = inspect.getframeinfo(inspect.currentframe())
+    raise RuntimeError(util.get_ffl_str(frame_info) + " node has no children")
   for child in latest_season.childNodes:
     id_stub = cr.VIDEO_DICT["id_stub"]
     if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("id") and child.getAttribute("id")[0 : len(id_stub)] == id_stub:
       latest_video = child
       break
+
+  title_node = latest_video.getElementsByTagName(cr.VIDEO_DICT["title_tagName"])
+  if len(title_node) == 0:
+    frame_info = inspect.getframeinfo(inspect.currentframe())
+    raise RuntimeError(util.get_ffl_str(frame_info) + "no {} tag found".format(cr.VIDEO_DICT["title_tagName"]))
 
   span = latest_video.getElementsByTagName(cr.VIDEO_DICT["title_tagName"])[0].toxml()
 
@@ -53,4 +66,4 @@ def getLatestEpisode(show):
       break
     latest_video_number += char
 
-  return latest_video_number.replace("\"","").replace("\'", "")
+  return latest_video_number

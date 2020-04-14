@@ -1,5 +1,8 @@
 from xml.dom import Node
+import inspect
+
 import crunchyroll_lib_rss as cr
+import util
 
 def getLatestSeason(show):
   """Get the name of the latest season number for a specific series on crunchyroll
@@ -30,5 +33,13 @@ def getLatestEpisode(show):
   xml = cr.getShowPage(show)
   video_node = cr.getLatestEpisodeNode(xml)
 
-  latest_video = video_node.getElementsByTagName(cr.EPISODE_DICT["episode_tagName"])[0].firstChild.data
+  nodes = video_node.getElementsByTagName(cr.EPISODE_DICT["episode_tagName"])
+  if len(nodes) == 0:
+    frame_info = inspect.getframeinfo(inspect.currentframe())
+    raise RuntimeError(util.get_ffs_str(frame_info) + " no {} tags found".format(cr.EPISODE_DICT["episode_tagName"]))
+  if not nodes[0].hasChildNodes():
+    frame_info = inspect.getframeinfo(inspect.currentframe())
+    raise RuntimeError(util.get_ffs_str(frame_info) + " {} has no children".format(cr.EPISODE_DICT["episode_tagName"]))
+
+  latest_video = nodes[0].firstChild.data
   return int(latest_video)
