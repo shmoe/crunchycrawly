@@ -1,7 +1,21 @@
 # crunchycrawly
 Python command line utility that crawls through Firefox bookmarks and Crunchyroll and returns a list of bookmarked series that have new episodes or seasons
 
-Takes the name of a Firefox profile's folder as an argument.
+```
+usage: python crunchycrawly.py [option] [profile path]
+Options and arguments:
+-h,	--help			display this dialog
+-v,	--verbose		disable progress bar and output detailed play-by-play
+	--rss			use Crunchyroll's RSS feed to check for new content
+	--html			use the serie's html page to check for new content,
+					this is the default and most well supported
+-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
+					search
+-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
+					for series. this folder must have a unique
+					name to avoid collisions
+-c,	--config=FILE		takes the path to a config file
+```
 
 ## Assumptions made about bookmarks
 1. Bookmark titles should be preceded by a string that denotes what episode or season you will watch next e.g. ` *[345] Bleach` or `` `(s3) That Time I was Reincarnated as a Slime``
@@ -27,3 +41,10 @@ Struck-through directories are ignored as they are in the default blacklist
       + `(22) Tonari No Seki-kun
       + `(13) Tanaka-kun Is Always Listless
    + ~**Reference**~
+   
+## Example of a config file
+crunchycrawly.config
+```
+ROOT_FOLDER=ANIME
+BLACKLIST=Ongoing By Air Day, Watch List, Completed, Reference
+```
