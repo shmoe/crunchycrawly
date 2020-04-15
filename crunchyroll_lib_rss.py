@@ -12,15 +12,15 @@ EPISODE_DICT = {"date_tagName": "pubDate", "episode_tagName":"crunchyroll:episod
 last_show = None
 last_check = None
 def getShowPage(show):
-  global last_show
-  if last_show != None and last_show[0] == show:
-    return last_show[1]
+	global last_show
+	if last_show != None and last_show[0] == show:
+		return last_show[1]
 
-  with urlopen(Request("http://crunchyroll.com/" + show + ".rss", headers={"User-Agent":USER_AGENT}), timeout=15) as response:
-    xml = xmlParse(response)
+	with urlopen(Request("http://crunchyroll.com/" + show + ".rss", headers={"User-Agent":USER_AGENT}), timeout=15) as response:
+		xml = xmlParse(response)
 
-  last_show = (show, xml)
-  return xml
+	last_show = (show, xml)
+	return xml
 
 def toTimeStamp(dt_str):
 	MONTHS = { "Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12 } 
