@@ -12,6 +12,12 @@ EPISODE_DICT = {"date_tagName": "pubDate", "episode_tagName":"crunchyroll:episod
 last_show = None
 last_check = None
 def getShowPage(show):
+	"""get the xml file for the given show's RSS feed and returns a xml.dom Document
+
+Argument:
+series_url_fragment --- the name of the series formatted as it is in its url
+	(eg. "my-hero-academia" for My Hero Academia) 
+"""
 	global last_show
 	if last_show != None and last_show[0] == show:
 		return last_show[1]
@@ -23,6 +29,12 @@ def getShowPage(show):
 	return xml
 
 def toTimeStamp(dt_str):
+	"""takes a string of format "WEEKDAY, MON DD YYYY HH:MM:SS TMZ" and returns it as a
+	POSIX timestamp
+
+Argument:
+dt_str --- a date-time string of the above format
+"""
 	MONTHS = { "Jan":1, "Feb":2, "Mar":3, "Apr":4, "May":5, "Jun":6, "Jul":7, "Aug":8, "Sep":9, "Oct":10, "Nov":11, "Dec":12 } 
 
 	year = 0
@@ -42,6 +54,12 @@ def toTimeStamp(dt_str):
 	return datetime(year, mon, day, time[0], time[1], time[2], tzinfo=pytz.timezone(tmz)).timestamp()
 
 def getLatestEpisodeNode(xml):
+	"""takes the xml.dom object of an RSS feed and returns the node that
+	contains the number of the latest episode
+
+Argument:
+xml --- a show's RSS feed parsed as an xml.dom Document
+"""
 	global last_check
 	if last_check != None and last_check[0] is xml:
 		return last_check[1]

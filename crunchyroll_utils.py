@@ -5,11 +5,12 @@ import crunchyroll_lib as cr
 import util
 
 def getLatestSeason(show):
-	"""Get the name of the latest season number for a specific series on crunchyroll
+	"""get the name of the latest season number for a specific series on crunchyroll
 
-	Argument:
-	series_url_fragment --- the name of the series formatted as it is in its url (eg. "my-hero-academia" for My Hero Academia)
-	"""
+Argument:
+series_url_fragment --- the name of the series formatted as it is in its url
+	(eg. "my-hero-academia" for My Hero Academia)
+"""
 	html = cr.getShowPage(show)
 	season = 0
 
@@ -25,11 +26,12 @@ def getLatestSeason(show):
 	return season
 
 def getLatestEpisode(show):
-	"""Get the number of the latest episode number for a specific series on crunchyroll
+	"""get the number of the latest episode number for a specific series on crunchyroll
 
-	Argument:
-	series_url_fragment --- the name of the series formatted as it is in its url (eg. "my-hero-academia" for My Hero Academia)
-	"""
+Argument:
+series_url_fragment --- the name of the series formatted as it is in its url
+	(eg. "my-hero-academia" for My Hero Academia)
+"""
 	latest_video = None
 
 	html = cr.getShowPage(show)

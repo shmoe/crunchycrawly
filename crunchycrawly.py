@@ -12,8 +12,8 @@ ROOT_FOLDER = "Anime"
 BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
 
 def parseBookmarks(bookmarks_path):
-	"""
-takes a Firefox places.sqlite file and returns an appropriate tree structure for hasNewContent(...)
+	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for
+	hasNewContent(...)
 
 Argument:
 bookmarks_path --- the path to the appropriate places.sqlite file
@@ -81,7 +81,8 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	return bookmarks
 
 def hasNewContent(show, bookmarks, verbose=False):
-	"""takes the bookmarks dict key for a show and returns if the show has new content that has not been recorded as seen in the dict
+	"""takes the bookmarks dict key for a show and returns if the show has new content
+	that has not been recorded as seen in the dict
 
 Arguments:
 show --- the key to the bookmarks dict for a particular show
@@ -109,11 +110,12 @@ bookmarks --- a properly formatted dictionary of bookmarks
 	return retval
 
 def progressBar(completed_tasks_ref, total_tasks):
-	"""displays a progress bar based on number of tasks completed and returns 0 when completed_tasks_ref == total_tasks
+	"""displays a progress bar based on number of tasks completed and returns 0 when
+	completed_tasks_ref == total_tasks
 
 Arguments:
-completed_tasks_ref --- reference to the variable that holds the total number of completed tasks. only read to
-prevent threading conflicts
+completed_tasks_ref --- reference to the variable that holds the total number
+	of completed tasks. only read to prevent threading conflicts
 total_tasks --- total number of tasks
 """
 	cursor.hide()
@@ -134,119 +136,120 @@ total_tasks --- total number of tasks
 	cursor.show()
 	return 3
 
-def main(argv):
-	"""usage: python crunchycrawly.py [option] [profile path]
-Options and arguments:
--h,	--help			display this dialog
--v,	--verbose		disable progress bar and output detailed play-by-play
-	--rss			use Crunchyroll's RSS feed to check for new content
-	--html			use the serie's html page to check for new content,
-					this is the default and most well supported
--b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
-					search
--r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
-					for series. this folder must have a unique
-					name to avoid collisions
--c,	--config=FILE		takes the path to a config file
-"""
-	VERBOSE = False
-	RSS = False
-
-	try:
-		opts, args = getopt.getopt(argv, "hvb:r:c:", ["help", "verbose", "rss", "html", "blacklist=","root-folder=", "config="])
-	except getopt.GetoptError:
-		sys.exit(e)
-
-	for opt, arg in opts:
-		global ROOT_FOLDER, BLACKLIST
-		if opt in ["-h", "--help"]:
-			print(main.__doc__)
-			sys.exit(0)
-		if opt in ["-v", "--verbose"]:
-			VERBOSE = True
-		if opt == "--rss":
-			RSS = True
-		if opt == "--html":
-			RSS = False
-		if opt in ["-b", "--blacklist"]:
-			BLACKLIST = tuple(arg.split(" "))
-		if opt in ["-r", "--root-folder"]:
-			ROOT_FOLDER = arg
-		if opt in ["-c", "--config-file"]:
-			with open(arg, 'r') as config_file:
-				for line in config_file:
-					pair = [el.strip() for el in line.split("=")]
-					if pair[0] == "ROOT_FOLDER":
-						ROOT_FOLDER = pair[1]
-					elif pair[0] == "BLACKLIST":
-						BLACKLIST = tuple([el.strip() for el in pair[1].split(",")])
-
-	if RSS:
-		import crunchyroll_utils_rss
-		global cr
-		cr = crunchyroll_utils_rss
-
-	try:
-		if len(args) == 0:
-			profile = "*.default-release"
-		elif len(args) == 1:
-			profile = args[1]
-		else:
-			frame_info = inspect.getframeinfo(inspect.currentframe())
-			raise RuntimeError(util.get_ffl_str(frame_info) + " expected 0-1 arguments, got {}".format(len(args)))
-
-		if platform.system() == "Windows":
-			profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
-		elif platform.system() == "Linux":
-			profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/")
-			if os.getenv("DEBUG", default=False):
-				profile_path = "testenv/" #debug
-		elif platform.system() == "Darwin":
-			profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
-		else:
-			frame_info = inspect.getframeinfo(inspect.currentframe())
-			raise RuntimeError(util.get_ffl_str(frame_info) + "platform OS not supported")
-
-		bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
-	except Exception as e:
-		sys.exit(e)
-
-	new_season = []
-	new_episode = []
-
-	with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-		futures = {executor.submit(hasNewContent, show, bookmarks, VERBOSE): show for show in bookmarks}
-		completed_futures_obj = {"tasks":0}
-		total_futures = len(futures)
-
-		if not VERBOSE:
-			executor.submit(progressBar, completed_futures_obj, total_futures)
-
-		for future in concurrent.futures.as_completed(futures):
-			result = future.result()
-			completed_futures_obj["tasks"] += 1
-
-			if result == 2:
-				new_season.append(futures[future])
-			elif result == 1:
-				new_episode.append(futures[future])
-
-	if VERBOSE:
-		print("\n")
-
-	print("New Season:", flush=True)
-	for title in new_season:
-		print("   ", title, flush=True)
-
-	print("New Episode:", flush=True)
-	for title in  new_episode:
-		print("   ", title, flush=True)
-
 if __name__ == "__main__":
-	import concurrent.futures
-	import platform
-	import os
-	import glob
-	import getopt
+	def main(argv):
+		"""usage: python crunchycrawly.py [option] [profile path]
+	Options and arguments:
+	-h,	--help			display this dialog
+	-v,	--verbose		disable progress bar and output detailed play-by-play
+		--rss			use Crunchyroll's RSS feed to check for new content
+		--html			use the serie's html page to check for new content,
+						this is the default and most well supported
+	-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
+						search
+	-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
+						for series. this folder must have a unique
+						name to avoid collisions
+	-c,	--config=FILE		takes the path to a config file
+	"""
+		import concurrent.futures
+		import platform
+		import os
+		import glob
+		import getopt
+
+		VERBOSE = False
+		RSS = False
+
+		try:
+			opts, args = getopt.getopt(argv, "hvb:r:c:", ["help", "verbose", "rss", "html", "blacklist=","root-folder=", "config="])
+		except getopt.GetoptError as e:
+			sys.exit(e)
+
+		for opt, arg in opts:
+			global ROOT_FOLDER, BLACKLIST
+			if opt in ["-h", "--help"]:
+				print(main.__doc__)
+				sys.exit(0)
+			if opt in ["-v", "--verbose"]:
+				VERBOSE = True
+			if opt == "--rss":
+				RSS = True
+			if opt == "--html":
+				RSS = False
+			if opt in ["-b", "--blacklist"]:
+				BLACKLIST = tuple(arg.split(" "))
+			if opt in ["-r", "--root-folder"]:
+				ROOT_FOLDER = arg
+			if opt in ["-c", "--config-file"]:
+				with open(arg, 'r') as config_file:
+					for line in config_file:
+						pair = [el.strip() for el in line.split("=")]
+						if pair[0] == "ROOT_FOLDER":
+							ROOT_FOLDER = pair[1]
+						elif pair[0] == "BLACKLIST":
+							BLACKLIST = tuple([el.strip() for el in pair[1].split(",")])
+
+		if RSS:
+			import crunchyroll_utils_rss
+			global cr
+			cr = crunchyroll_utils_rss
+
+		try:
+			if len(args) == 0:
+				profile = "*.default-release"
+			elif len(args) == 1:
+				profile = args[1]
+			else:
+				frame_info = inspect.getframeinfo(inspect.currentframe())
+				raise RuntimeError(util.get_ffl_str(frame_info) + " expected 0-1 arguments, got {}".format(len(args)))
+
+			if platform.system() == "Windows":
+				profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
+			elif platform.system() == "Linux":
+				profile_path = os.path.expandvars("~/.mozilla/firefox/" + profile + "/")
+				if os.getenv("DEBUG", default=False):
+					profile_path = "testenv/" #debug
+			elif platform.system() == "Darwin":
+				profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
+			else:
+				frame_info = inspect.getframeinfo(inspect.currentframe())
+				raise RuntimeError(util.get_ffl_str(frame_info) + "platform OS not supported")
+
+			bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
+		except Exception as e:
+			sys.exit(e)
+
+		new_season = []
+		new_episode = []
+
+		with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+			futures = {executor.submit(hasNewContent, show, bookmarks, VERBOSE): show for show in bookmarks}
+			completed_futures_obj = {"tasks":0}
+			total_futures = len(futures)
+
+			if not VERBOSE:
+				executor.submit(progressBar, completed_futures_obj, total_futures)
+
+			for future in concurrent.futures.as_completed(futures):
+				result = future.result()
+				completed_futures_obj["tasks"] += 1
+
+				if result == 2:
+					new_season.append(futures[future])
+				elif result == 1:
+					new_episode.append(futures[future])
+
+		if VERBOSE:
+			print("\n")
+
+		print("New Season:", flush=True)
+		for title in new_season:
+			print("   ", title, flush=True)
+
+		print("New Episode:", flush=True)
+		for title in  new_episode:
+			print("   ", title, flush=True)
+
 
 	main(sys.argv[1:])
