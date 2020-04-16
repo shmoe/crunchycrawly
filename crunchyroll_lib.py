@@ -12,7 +12,8 @@ SEASON_DICT = {"class" : "season", "tagName" : "li", "title_tagName" : "a", "tit
 
 last_show = None
 def getShowPage(show):
-	"""get the html file for the given show's episode list and returns a xml.dom Document
+	"""\
+get the html file for the given show's episode list and returns a xml.dom Document
 
 Argument:
 series_url_fragment --- the name of the series formatted as it is in its url
@@ -29,7 +30,8 @@ series_url_fragment --- the name of the series formatted as it is in its url
 	return html
 
 def getElementById(element, id, tagName):
-	"""get the xml.dom element with the corresponding id
+	"""\
+get the xml.dom element with the corresponding id
 
 Arguments:
 element --- parent xml.dom element
@@ -43,7 +45,8 @@ tagName --- tagName for the element with said id"""
 	raise RuntimeError(util.get_ffl_str(frame_info) + " no {} tag with id '{}' found".format(tagName, id)) 
 
 def getLatestSeasonNode(html):
-	"""takes the xml.dom object of a show's episode list and returns the node that
+	"""\
+takes the xml.dom object of a show's episode list and returns the node that
 	contains the season number of the latest episode
 
 Argument:

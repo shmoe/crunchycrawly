@@ -12,7 +12,8 @@ ROOT_FOLDER = "Anime"
 BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
 
 def parseBookmarks(bookmarks_path):
-	"""takes a Firefox places.sqlite file and returns an appropriate tree structure for
+	"""\
+takes a Firefox places.sqlite file and returns an appropriate tree structure for
 	hasNewContent(...)
 
 Argument:
@@ -84,7 +85,8 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	return bookmarks
 
 def hasNewContent(show, bookmarks, verbose=False):
-	"""takes the bookmarks dict key for a show and returns if the show has new content
+	"""\
+takes the bookmarks dict key for a show and returns if the show has new content
 	that has not been recorded as seen in the dict
 
 Arguments:
@@ -113,7 +115,8 @@ bookmarks --- a properly formatted dictionary of bookmarks
 	return retval
 
 def progressBar(completed_tasks_ref, total_tasks):
-	"""displays a progress bar based on number of tasks completed and returns 0 when
+	"""\
+displays a progress bar based on number of tasks completed and returns 0 when
 	completed_tasks_ref == total_tasks
 
 Arguments:
@@ -141,7 +144,9 @@ total_tasks --- total number of tasks
 
 if __name__ == "__main__":
 	def main(argv):
-		"""usage: python crunchycrawly.py [option] [profile path]
+		"""\
+usage: python crunchycrawly.py [options] [profile path]
+
 Options and arguments:
 -h,	--help			display this dialog
 -v,	--verbose		disable progress bar and output detailed play-by-play
@@ -222,13 +227,6 @@ Options and arguments:
 			bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 		except Exception as e:
 			sys.exit(e)
-
-		#DEBUG
-		print("{")
-		for key, val in bookmarks.items():
-			print("\t{k}	{v}".format(k=key,v=val))
-		print("}")
-		return 0
 
 		new_season = []
 		new_episode = []

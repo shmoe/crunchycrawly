@@ -2,7 +2,8 @@
 Python command line utility that crawls through Firefox bookmarks and Crunchyroll and returns a list of bookmarked series that have new episodes or seasons
 
 ```
-usage: python crunchycrawly.py [option] [profile path]
+usage: python crunchycrawly.py [options] [profile path]
+
 Options and arguments:
 -h,	--help			display this dialog
 -v,	--verbose		disable progress bar and output detailed play-by-play

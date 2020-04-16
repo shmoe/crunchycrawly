@@ -1,5 +1,6 @@
 def get_ffl_str(frame_info):
-	"""takes the info for a certain frame and returns a string of format
+	"""\
+takes the info for a certain frame and returns a string of format
 	"[filename/functionname/linenumber]"
 
 frame_info --- named tuple returned by inspect.getframeinfo(...)

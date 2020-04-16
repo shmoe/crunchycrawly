@@ -5,7 +5,8 @@ import crunchyroll_lib as cr
 import util
 
 def getLatestSeason(show):
-	"""get the name of the latest season number for a specific series on crunchyroll
+	"""\
+get the name of the latest season number for a specific series on crunchyroll
 
 Argument:
 series_url_fragment --- the name of the series formatted as it is in its url
@@ -26,7 +27,8 @@ series_url_fragment --- the name of the series formatted as it is in its url
 	return season
 
 def getLatestEpisode(show):
-	"""get the number of the latest episode number for a specific series on crunchyroll
+	"""\
+get the number of the latest episode number for a specific series on crunchyroll
 
 Argument:
 series_url_fragment --- the name of the series formatted as it is in its url
