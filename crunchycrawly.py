@@ -34,6 +34,15 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 
 		return {title : {"title_stub": bookmark[1].split(".com/")[1], "season": season, "episode": episode}}
 
+	def get_subfolders(cursor, folder_ids, blacklist):
+		sql = "SELECT id from moz_bookmarks WHERE type=2 AND parent IN({SEQ1}) AND title NOT IN({SEQ2})".format( SEQ1=','.join(['?']*len(folder_ids)), SEQ2=','.join(['?']*len(folder_blacklist)) )
+		cursor.execute(sql, folder_ids + blacklist)
+		rows = c.fetchall()
+		if len(rows) == 0:
+			return folder_ids
+		else:
+			return folder_ids + get_subfolders(cursor, tuple([row[0] for row in rows]), blacklist)
+
 	global ROOT_FOLDER, BLACKLIST
 	root_folder = (ROOT_FOLDER,)
 	folder_blacklist = BLACKLIST
@@ -52,19 +61,13 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 		frame_info = inspect.getframeinfo(inspect.currentframe())
 		raise RuntimeError(util.get_ffl_str(frame_info) + " bookmark folder {} not found".format(root_folder[0]))
 
-	c.execute("SELECT id FROM moz_bookmarks WHERE type=2 AND parent = ? AND title NOT IN({SEQ})".format(SEQ=','.join(['?']*len(folder_blacklist))), root_id + folder_blacklist)
-	rows = c.fetchall()
+	subfolders = get_subfolders(c, root_id, folder_blacklist)
 
-	if len(rows) == 0:
-		subfolders = ()
-	else:
-		subfolders = tuple( map(lambda row : row[0], rows) )
-
-	#TODO select ids of all nested subfolders of `subfolders` and add to `subfolders`
-
+	#TODO select only Crunchyroll series urls
 	c.execute("""SELECT moz_bookmarks.title, moz_places.url FROM moz_bookmarks
 				 JOIN moz_places ON moz_bookmarks.fk = moz_places.id
-				 WHERE moz_bookmarks.type=1 and moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
+				 WHERE moz_places.url LIKE '%crunchyroll.com/%'
+				 AND moz_bookmarks.type=1 AND moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
 
 	bookmarks = {}
 
@@ -139,19 +142,19 @@ total_tasks --- total number of tasks
 if __name__ == "__main__":
 	def main(argv):
 		"""usage: python crunchycrawly.py [option] [profile path]
-	Options and arguments:
-	-h,	--help			display this dialog
-	-v,	--verbose		disable progress bar and output detailed play-by-play
-		--rss			use Crunchyroll's RSS feed to check for new content
-		--html			use the serie's html page to check for new content,
-						this is the default and most well supported
-	-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
-						search
-	-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
-						for series. this folder must have a unique
-						name to avoid collisions
-	-c,	--config=FILE		takes the path to a config file
-	"""
+Options and arguments:
+-h,	--help			display this dialog
+-v,	--verbose		disable progress bar and output detailed play-by-play
+	--rss			use Crunchyroll's RSS feed to check for new content
+	--html			use the serie's html page to check for new content,
+					this is the default and most well supported
+-b,	--blacklist=FOLDERS	takes a list of bookmark folders to exclude from the
+					search
+-r,	--root-folder=FOLDER	takes the name of the top bookmark folder to search
+					for series. this folder must have a unique
+					name to avoid collisions
+-c,	--config=FILE		takes the path to a config file
+"""
 		import concurrent.futures
 		import platform
 		import os
@@ -219,6 +222,13 @@ if __name__ == "__main__":
 			bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 		except Exception as e:
 			sys.exit(e)
+
+		#DEBUG
+		print("{")
+		for key, val in bookmarks.items():
+			print("\t{k}	{v}".format(k=key,v=val))
+		print("}")
+		return 0
 
 		new_season = []
 		new_episode = []
