@@ -210,7 +210,7 @@ Options and arguments:
 			if len(args) == 0:
 				profile = "*.default-release"
 			elif len(args) == 1:
-				profile = args[1]
+				profile = args[0]
 			else:
 				raise RTError("expected 0-1 arguments, got {}".format(len(args)), currentframe())
 
