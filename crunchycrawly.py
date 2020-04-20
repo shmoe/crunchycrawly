@@ -48,40 +48,39 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 	root_folder = (ROOT_FOLDER,)
 	folder_blacklist = BLACKLIST
 
-	conn = sqlite3.connect(bookmarks_path)
-	c = conn.cursor()
+	with sqlite3.connect(bookmarks_path) as conn:
+		c = conn.cursor()
 
-	c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
-	root_ids = c.fetchall()
-	if len(root_ids) > 1:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " root folder name {} not unique".format(root_folder[0]))
+		c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
+		root_ids = c.fetchall()
+		if len(root_ids) > 1:
+			frame_info = inspect.getframeinfo(inspect.currentframe())
+			raise RuntimeError(util.get_ffl_str(frame_info) + " root folder name {} not unique".format(root_folder[0]))
 
-	root_id = root_ids[0]
-	if root_id == None:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " bookmark folder {} not found".format(root_folder[0]))
+		root_id = root_ids[0]
+		if root_id == None:
+			frame_info = inspect.getframeinfo(inspect.currentframe())
+			raise RuntimeError(util.get_ffl_str(frame_info) + " bookmark folder {} not found".format(root_folder[0]))
 
-	subfolders = get_subfolders(c, root_id, folder_blacklist)
+		subfolders = get_subfolders(c, root_id, folder_blacklist)
 
-	#TODO select only Crunchyroll series urls
-	c.execute("""SELECT moz_bookmarks.title, moz_places.url FROM moz_bookmarks
-				 JOIN moz_places ON moz_bookmarks.fk = moz_places.id
-				 WHERE moz_places.url LIKE '%crunchyroll.com/%'
-				 AND moz_bookmarks.type=1 AND moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
+		#TODO select only Crunchyroll series urls
+		c.execute("""SELECT moz_bookmarks.title, moz_places.url FROM moz_bookmarks
+					JOIN moz_places ON moz_bookmarks.fk = moz_places.id
+					WHERE moz_places.url LIKE '%crunchyroll.com/%'
+					AND moz_bookmarks.type=1 AND moz_bookmarks.parent IN({SEQ})""".format(SEQ=",".join(['?']*(len(subfolders)+1))), root_id + subfolders)
 
-	bookmarks = {}
+		bookmarks = {}
 
-	rows = c.fetchall()
+		rows = c.fetchall()
 
-	if len(rows) == 0:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + "no bookmarks found in {}".format(root_folder[0]))
+		if len(rows) == 0:
+			frame_info = inspect.getframeinfo(inspect.currentframe())
+			raise RuntimeError(util.get_ffl_str(frame_info) + "no bookmarks found in {}".format(root_folder[0]))
 
-	for pair in map(map_bookmark, rows):
-		bookmarks.update(pair)
+		for pair in map(map_bookmark, rows):
+			bookmarks.update(pair)
 
-	conn.close()
 	return bookmarks
 
 def hasNewContent(show, bookmarks, verbose=False):
