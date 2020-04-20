@@ -1,8 +1,8 @@
 from xml.dom import Node
-import inspect
+from inspect import currentframe
 
 import crunchyroll_lib_rss as cr
-import util
+from util import RTError
 
 def getLatestSeason(show):
 	"""\
@@ -39,11 +39,9 @@ series_url_fragment --- the name of the series formatted as it is in its url
 
 	nodes = video_node.getElementsByTagName(cr.EPISODE_DICT["episode_tagName"])
 	if len(nodes) == 0:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " no {} tags found".format(cr.EPISODE_DICT["episode_tagName"]))
+		raise RTError("no {} tags found".format(cr.EPISODE_DICT["episode_tagName"]), currentframe())
 	if not nodes[0].hasChildNodes():
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " {} has no children".format(cr.EPISODE_DICT["episode_tagName"]))
+		raise RTError("{} has no children".format(cr.EPISODE_DICT["episode_tagName"]), currentframe())
 
 	latest_video = nodes[0].firstChild.data
 	return int(latest_video)

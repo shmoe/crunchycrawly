@@ -1,8 +1,8 @@
 from xml.dom import Node
-import inspect
+from inspect import currentframe
 
 import crunchyroll_lib as cr
-import util
+from util import RTError
 
 def getLatestSeason(show):
 	"""\
@@ -40,16 +40,14 @@ series_url_fragment --- the name of the series formatted as it is in its url
 	latest_season = cr.getLatestSeasonNode(html)
 
 	if not latest_season.hasChildNodes():
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " node has no children")
+		raise RTError("node has no children", currentframe())
 	for child in latest_season.childNodes:
 		if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("class") and "portrait-grid" in child.getAttribute("class"):
 			latest_season = child
 			break
 
 	if not latest_season.hasChildNodes():
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " node has no children")
+		raise RTError("node has no children", currentframe())
 	for child in latest_season.childNodes:
 		id_stub = cr.VIDEO_DICT["id_stub"]
 		if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("id") and child.getAttribute("id")[0 : len(id_stub)] == id_stub:
@@ -58,8 +56,7 @@ series_url_fragment --- the name of the series formatted as it is in its url
 
 	title_node = latest_video.getElementsByTagName(cr.VIDEO_DICT["title_tagName"])
 	if len(title_node) == 0:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + "no {} tag found".format(cr.VIDEO_DICT["title_tagName"]))
+		raise RTError("no {} tag found".format(cr.VIDEO_DICT["title_tagName"]), currentframe())
 
 	span = latest_video.getElementsByTagName(cr.VIDEO_DICT["title_tagName"])[0].toxml()
 

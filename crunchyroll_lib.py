@@ -1,9 +1,9 @@
 from urllib.request import urlopen
 from xml.dom import Node
-import inspect
+from inspect import currentframe
 
+from util import RTError
 import html5lib
-import util
 
 VIDEO_DICT = {"id_stub": "showview_videos_media_", "title_stub": "Episode ", "taName": "li", "title_tagName" : "a"}
 VIDEOS_DICT = {"id": "showview_content_videos", "tagName": "div"}
@@ -41,8 +41,7 @@ tagName --- tagName for the element with said id"""
 		if node.hasAttribute("id"):
 			if node.getAttribute("id") == id:
 				return node
-	frame_info = inspect.getframeinfo(inspect.currentframe())
-	raise RuntimeError(util.get_ffl_str(frame_info) + " no {} tag with id '{}' found".format(tagName, id)) 
+	raise RTError("no {} tag with id '{}' found".format(tagName, id), currentframe()) 
 
 def getLatestSeasonNode(html):
 	"""\
@@ -62,15 +61,13 @@ html --- a show's episode list parsed as an xml.dom Document
 			seasons = child
 			break
 	if seasons == None:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " no node with class {} found".format(SEASONS_DICT["class"]))
+		raise RTError("no node with class {} found".format(SEASONS_DICT["class"]), currentframe())
 
 	for child in seasons.childNodes:
 		if child.nodeType == Node.ELEMENT_NODE and child.hasAttribute("class") and SEASON_DICT["class"] in child.getAttribute("class"):
 			latest_season = child
 			break
 	if latest_season == None:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " no node with class {} found".format(SEASON_DICT["class"]))
+		raise RTError("no node with class {} found".format(SEASON_DICT["class"]), currentframe())
 
 	return latest_season

@@ -1,10 +1,10 @@
 from urllib.request import urlopen, Request
 from xml.dom.minidom import parse as xmlParse
 from datetime import datetime
-import inspect
+from inspect import currentframe
 
-import pytz
-import util
+from pytz import timezone
+from util import RTError
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0) Gecko/20100101 Firefox/74.0"
 EPISODE_DICT = {"date_tagName": "pubDate", "episode_tagName":"crunchyroll:episodeNumber", "season_tagName" : "crunchyroll:season"}
@@ -53,7 +53,7 @@ dt_str --- a date-time string of the above format
 	time = list(map(lambda i : int(i), tmp[3].split(":")))
 	tmz = tmp[4]
 
-	return datetime(year, mon, day, time[0], time[1], time[2], tzinfo=pytz.timezone(tmz)).timestamp()
+	return datetime(year, mon, day, time[0], time[1], time[2], tzinfo=timezone(tmz)).timestamp()
 
 def getLatestEpisodeNode(xml):
 	"""\
@@ -72,8 +72,7 @@ xml --- a show's RSS feed parsed as an xml.dom Document
 	for node in xml.getElementsByTagName(EPISODE_DICT["date_tagName"]):
 		episode_list.append( (node.parentNode, toTimeStamp(node.firstChild.data)) )
 	if len(episode_list) == 0:
-		frame_info = inspect.getframeinfo(inspect.currentframe())
-		raise RuntimeError(util.get_ffl_str(frame_info) + " no nodes with tag {} found".format(EPISODE_DICT["date_tagName"]))
+		raise RTError("no nodes with tag {} found".format(EPISODE_DICT["date_tagName"]), currentframe())
 
 	episode_list.sort(key = lambda tup : tup[1])
 

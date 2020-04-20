@@ -1,12 +1,12 @@
 import crunchyroll_utils as cr
+from util import RTError
 import sqlite3
 import cursor
-import util
 
+from time import sleep
+from math import ceil
+from inspect import currentframe
 import sys
-import time
-import math
-import inspect
 
 ROOT_FOLDER = "Anime"
 BLACKLIST = ("Ongoing by Air Day", "Watch List", "Completed", "Reference")
@@ -54,13 +54,11 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 		c.execute("SELECT id FROM moz_bookmarks WHERE type = 2 and title = ?", root_folder)
 		root_ids = c.fetchall()
 		if len(root_ids) > 1:
-			frame_info = inspect.getframeinfo(inspect.currentframe())
-			raise RuntimeError(util.get_ffl_str(frame_info) + " root folder name {} not unique".format(root_folder[0]))
+			raise RTError("root folder name {} not unique".format(root_folder[0]), currentframe())
 
 		root_id = root_ids[0]
 		if root_id == None:
-			frame_info = inspect.getframeinfo(inspect.currentframe())
-			raise RuntimeError(util.get_ffl_str(frame_info) + " bookmark folder {} not found".format(root_folder[0]))
+			raise RTError("bookmark folder {} not found".format(root_folder[0]), currentframe())
 
 		subfolders = get_subfolders(c, root_id, folder_blacklist)
 
@@ -75,8 +73,7 @@ bookmarks_path --- the path to the appropriate places.sqlite file
 		rows = c.fetchall()
 
 		if len(rows) == 0:
-			frame_info = inspect.getframeinfo(inspect.currentframe())
-			raise RuntimeError(util.get_ffl_str(frame_info) + "no bookmarks found in {}".format(root_folder[0]))
+			raise RTError("no bookmarks found in {}".format(root_folder[0]), currentframe())
 
 		for pair in map(map_bookmark, rows):
 			bookmarks.update(pair)
@@ -127,11 +124,11 @@ total_tasks --- total number of tasks
 	bar_width = 30
 	while completed_tasks_ref["tasks"] < total_tasks:
 		completed_tasks = completed_tasks_ref["tasks"]
-		num_ticks = int(math.ceil(bar_width * (completed_tasks / total_tasks)))
+		num_ticks = int(ceil(bar_width * (completed_tasks / total_tasks)))
 		num_blank = bar_width - num_ticks
 		sys.stdout.write("[" + "="*num_ticks + " "*num_blank + "]")
 		sys.stdout.flush()
-		time.sleep(0.01)
+		sleep(0.01)
 		sys.stdout.write("\b" * (bar_width + 2))
 		sys.stdout.flush()
 
@@ -215,8 +212,7 @@ Options and arguments:
 			elif len(args) == 1:
 				profile = args[1]
 			else:
-				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + " expected 0-1 arguments, got {}".format(len(args)))
+				raise RTError("expected 0-1 arguments, got {}".format(len(args)), currentframe())
 
 			if platform.system() == "Windows":
 				profile_path = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles\\" + profile + "\\")
@@ -227,24 +223,20 @@ Options and arguments:
 			elif platform.system() == "Darwin":
 				profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 			else:
-				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + " platform OS not supported")
+				raise RTError("platform OS not supported", currentframe())
 
 			if not os.path.exists(profile_path.split(profile)[0]):
-				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + " Firefox not found in expected directory\n\tDid you forget to define DEBUG?") 
+				raise RTError("Firefox not found in expected directory\n\tDid you forget to define DEBUG?", currentframe()) 
 
 			deglobbed_paths = glob.glob(profile_path)
 
 			if len(deglobbed_paths) == 0:
-				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + " Firefox profile {} not found".format(profile))
+				raise RTError("Firefox profile {} not found".format(profile), currentframe())
 
 			places_path = deglobbed_paths[0] + "places.sqlite"
 
 			if not os.path.exists(places_path):
-				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + " places.sqlite file not found in Firefox profile " + profile)
+				raise RTError("places.sqlite file not found in Firefox profile " + profile, currentframe())
 
 			bookmarks = parseBookmarks(places_path)
 		except Exception as e:
