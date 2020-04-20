@@ -231,7 +231,23 @@ Options and arguments:
 				frame_info = inspect.getframeinfo(inspect.currentframe())
 				raise RuntimeError(util.get_ffl_str(frame_info) + " platform OS not supported")
 
-			bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
+			if not os.path.exists(profile_path.split(profile)[0]):
+				frame_info = inspect.getframeinfo(inspect.currentframe())
+				raise RuntimeError(util.get_ffl_str(frame_info) + " Firefox not found in expected directory\n\tDid you forget to define DEBUG?") 
+
+			deglobbed_paths = glob.glob(profile_path)
+
+			if len(deglobbed_paths) == 0:
+				frame_info = inspect.getframeinfo(inspect.currentframe())
+				raise RuntimeError(util.get_ffl_str(frame_info) + " Firefox profile {} not found".format(profile))
+
+			places_path = deglobbed_paths[0] + "places.sqlite"
+
+			if not os.path.exists(places_path):
+				frame_info = inspect.getframeinfo(inspect.currentframe())
+				raise RuntimeError(util.get_ffl_str(frame_info) + " places.sqlite file not found in Firefox profile " + profile)
+
+			bookmarks = parseBookmarks(places_path)
 		except Exception as e:
 			sys.exit(e)
 
