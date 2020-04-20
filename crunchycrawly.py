@@ -165,6 +165,7 @@ Options and arguments:
 		import os
 		import glob
 		import getopt
+		from warnings import warn
 
 		VERBOSE = False
 		RSS = False
@@ -197,7 +198,13 @@ Options and arguments:
 							ROOT_FOLDER = pair[1]
 						elif pair[0] == "BLACKLIST":
 							BLACKLIST = tuple([el.strip() for el in pair[1].split(",")])
-
+						elif pair[0] == "RSS":
+							if pair[1].strip() == "0" or pair[1].strip().upper() == "FALSE":
+								RSS = False
+							elif pair[1].strip() == "1" or pair[1].strip().upper() == "TRUE":
+								RSS = True
+							else:
+								warn("Invalid value given for RSS in {}".format(arg), RuntimeWarning)
 		if RSS:
 			import crunchyroll_utils_rss
 			global cr
@@ -222,7 +229,7 @@ Options and arguments:
 				profile_path = os.path.expandvars("~/Library/Application Support/Mozilla/Firefox/Profiles/" + profile + "/")
 			else:
 				frame_info = inspect.getframeinfo(inspect.currentframe())
-				raise RuntimeError(util.get_ffl_str(frame_info) + "platform OS not supported")
+				raise RuntimeError(util.get_ffl_str(frame_info) + " platform OS not supported")
 
 			bookmarks = parseBookmarks(glob.glob(profile_path)[0] + "places.sqlite")
 		except Exception as e:

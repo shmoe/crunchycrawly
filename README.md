@@ -46,6 +46,7 @@ Struck-through directories are ignored as they are in the default blacklist
 ## Example of a config file
 crunchycrawly.config
 ```
-ROOT_FOLDER=ANIME
+ROOT_FOLDER=Anime
 BLACKLIST=Ongoing By Air Day, Watch List, Completed, Reference
+RSS=True
 ```
