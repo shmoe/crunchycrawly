@@ -9,10 +9,10 @@ tags = check_output("git tag --points-at HEAD", shell=True, text=True).split()
 if tags and tags[0]:
 	version = tags[0].strip()
 else:
-	tags = check_output("git log --pretty=format:'%h' -n 1", shell=True, text=True).split()
+	tags = check_output('git log --pretty=format:"%h" -n 1', shell=True, text=True).split()
 	version = tags[0].strip()
 
-tags = check_output("git log --pretty=format:'%an\t%ae' -n 1", shell=True, text=True).split('\t')
+tags = check_output('git log --pretty=format:"%an\t%ae" -n 1', shell=True, text=True).split('\t')
 
 setuptools.setup(
 	name="crunchycrawly",
