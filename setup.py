@@ -6,7 +6,7 @@ with open("README.md", "r") as fi:
 
 tags = check_output("git tag --points-at HEAD", shell=True, text=True).split()
 
-if tags[0]:
+if tags and tags[0]:
 	version = tags[0].strip()
 else:
 	tags = check_output("git log --pretty=format:'%h' -n 1", shell=True, text=True).split()
